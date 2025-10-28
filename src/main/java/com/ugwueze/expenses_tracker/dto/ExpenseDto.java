@@ -1,6 +1,7 @@
 package com.ugwueze.expenses_tracker.dto;
 
 import com.ugwueze.expenses_tracker.entity.Expense;
+import com.ugwueze.expenses_tracker.enums.PaymentMethod;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -23,7 +24,7 @@ public class ExpenseDto {
     @NotBlank(message = "Category is required")
     private String category;
 
-    private Expense.PaymentMethod paymentMethod;
+    private PaymentMethod paymentMethod;
 
     private String notes;
 
@@ -37,7 +38,7 @@ public class ExpenseDto {
                       BigDecimal amount,
                       LocalDate date,
                       String category,
-                      Expense.PaymentMethod paymentMethod,
+                      PaymentMethod paymentMethod,
                       String notes,
                       Long userId) {
         this.id = id;
@@ -94,11 +95,11 @@ public class ExpenseDto {
         this.category = category;
     }
 
-    public Expense.PaymentMethod getPaymentMethod() {
+    public PaymentMethod getPaymentMethod() {
         return paymentMethod;
     }
 
-    public void setPaymentMethod(Expense.PaymentMethod paymentMethod) {
+    public void setPaymentMethod(PaymentMethod paymentMethod) {
         this.paymentMethod = paymentMethod;
     }
 
@@ -159,7 +160,7 @@ public class ExpenseDto {
         private BigDecimal amount;
         private LocalDate date;
         private String category;
-        private Expense.PaymentMethod paymentMethod;
+        private PaymentMethod paymentMethod;
         private String notes;
         private Long userId;
 
@@ -191,7 +192,7 @@ public class ExpenseDto {
             return this;
         }
 
-        public Builder paymentMethod(Expense.PaymentMethod paymentMethod) {
+        public Builder paymentMethod(PaymentMethod paymentMethod) {
             this.paymentMethod = paymentMethod;
             return this;
         }

@@ -1,5 +1,6 @@
 package com.ugwueze.expenses_tracker.entity;
 
+import com.ugwueze.expenses_tracker.enums.PaymentMethod;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -48,9 +49,6 @@ public class Expense {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    public enum PaymentMethod {
-        CASH, CREDIT_CARD, DEBIT_CARD, BANK_TRANSFER, DIGITAL_WALLET, OTHER
-    }
 
     public Expense() {
     }
