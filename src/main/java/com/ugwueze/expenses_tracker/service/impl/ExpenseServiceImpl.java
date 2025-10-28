@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -162,4 +163,53 @@ public class ExpenseServiceImpl implements ExpenseService {
                 .map(expenseMapper::toDto)
                 .collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Map<Integer, BigDecimal> getMonthlyExpensesSummary(Long userId, int year) {
+        if (userId == null) {
+            throw new IllegalArgumentException("userId must not be null");
+        }
+        if (year < 1900 || year > 3000) {
+            throw new IllegalArgumentException("year out of range: " + year);
+        }
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("User not found with id: " + userId);
+        }
+
+        LocalDate start = LocalDate.of(year, 1, 1);
+        LocalDate end = LocalDate.of(year, 12, 31);
+
+        List<Expense> expenses = expenseRepository.findByUserIdAndDateBetween(userId, start, end);
+
+        Map<Integer, BigDecimal> monthly = java.util.stream.IntStream.rangeClosed(1, 12)
+                .boxed()
+                .collect(Collectors.toMap(m -> m, m -> BigDecimal.ZERO, (a, b) -> a, java.util.LinkedHashMap::new));
+
+        for (Expense e : expenses) {
+            if (e == null) {
+                continue;
+            }
+            LocalDate d = e.getDate();
+            if (d == null) {
+                continue;
+            }
+            int month = d.getMonthValue();
+            BigDecimal amount = e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO;
+            amount = amount.setScale(2, java.math.RoundingMode.HALF_UP);
+            monthly.merge(month, amount, BigDecimal::add);
+        }
+
+        Map<Integer, BigDecimal> result = monthly.entrySet().stream()
+                .filter(entry -> entry.getValue() != null && entry.getValue().compareTo(BigDecimal.ZERO) > 0)
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (a, b) -> a,
+                        java.util.LinkedHashMap::new
+                ));
+
+        return result;
+    }
+
 }

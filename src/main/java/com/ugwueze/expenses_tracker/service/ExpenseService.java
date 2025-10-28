@@ -4,6 +4,8 @@ import com.ugwueze.expenses_tracker.dto.ExpenseDto;
 import com.ugwueze.expenses_tracker.dto.ExpenseSummaryDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -30,4 +32,7 @@ public interface ExpenseService {
     ExpenseSummaryDto getExpenseSummary(Long userId, LocalDate startDate, LocalDate endDate);
 
     List<ExpenseDto> getExpensesByCategory(Long userId, String category);
+
+    @Transactional(readOnly = true)
+    Map<Integer, BigDecimal> getMonthlyExpensesSummary(Long userId, int year);
 }
