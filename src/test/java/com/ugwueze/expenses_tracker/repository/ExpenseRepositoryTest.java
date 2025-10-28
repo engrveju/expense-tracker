@@ -3,6 +3,7 @@ package com.ugwueze.expenses_tracker.repository;
 import com.ugwueze.expenses_tracker.AbstractIntegrationTest;
 import com.ugwueze.expenses_tracker.entity.Expense;
 import com.ugwueze.expenses_tracker.entity.User;
+import com.ugwueze.expenses_tracker.enums.PaymentMethod;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +48,7 @@ class ExpenseRepositoryTest extends AbstractIntegrationTest {
                 .amount(new BigDecimal("100.00"))
                 .date(LocalDate.now())
                 .category("Test")
-                .paymentMethod(Expense.PaymentMethod.CASH)
+                .paymentMethod(PaymentMethod.CASH)
                 .user(testUser)
                 .build();
         testExpense = expenseRepository.save(testExpense);
@@ -97,7 +98,7 @@ class ExpenseRepositoryTest extends AbstractIntegrationTest {
                 .amount(new BigDecimal("50.00"))
                 .date(LocalDate.now())
                 .category("Test")
-                .paymentMethod(Expense.PaymentMethod.CREDIT_CARD)
+                .paymentMethod(PaymentMethod.CREDIT_CARD)
                 .user(testUser)
                 .build();
         expenseRepository.save(anotherExpense);

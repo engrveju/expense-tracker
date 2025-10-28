@@ -3,6 +3,7 @@ package com.ugwueze.expenses_tracker.service;
 import com.ugwueze.expenses_tracker.dto.ExpenseDto;
 import com.ugwueze.expenses_tracker.entity.Expense;
 import com.ugwueze.expenses_tracker.entity.User;
+import com.ugwueze.expenses_tracker.enums.PaymentMethod;
 import com.ugwueze.expenses_tracker.exception.ResourceNotFoundException;
 import com.ugwueze.expenses_tracker.repository.ExpenseRepository;
 import com.ugwueze.expenses_tracker.repository.UserRepository;
@@ -60,7 +61,7 @@ class ExpenseServiceUnitTest {
                 .amount(new BigDecimal("100.00"))
                 .date(LocalDate.now())
                 .category("Test")
-                .paymentMethod(Expense.PaymentMethod.CASH)
+                .paymentMethod(PaymentMethod.CASH)
                 .user(testUser)
                 .build();
 
@@ -70,7 +71,7 @@ class ExpenseServiceUnitTest {
                 .amount(new BigDecimal("100.00"))
                 .date(LocalDate.now())
                 .category("Test")
-                .paymentMethod(Expense.PaymentMethod.CASH)
+                .paymentMethod(PaymentMethod.CASH)
                 .userId(1L)
                 .build();
     }

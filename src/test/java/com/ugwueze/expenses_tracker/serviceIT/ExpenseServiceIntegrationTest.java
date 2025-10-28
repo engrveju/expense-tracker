@@ -4,6 +4,7 @@ import com.ugwueze.expenses_tracker.AbstractIntegrationTest;
 import com.ugwueze.expenses_tracker.dto.ExpenseDto;
 import com.ugwueze.expenses_tracker.entity.Expense;
 import com.ugwueze.expenses_tracker.entity.User;
+import com.ugwueze.expenses_tracker.enums.PaymentMethod;
 import com.ugwueze.expenses_tracker.exception.ResourceNotFoundException;
 import com.ugwueze.expenses_tracker.repository.ExpenseRepository;
 import com.ugwueze.expenses_tracker.repository.UserRepository;
@@ -56,7 +57,7 @@ class ExpenseServiceIntegrationTest extends AbstractIntegrationTest {
                 .amount(new BigDecimal("100.00"))
                 .date(LocalDate.now())
                 .category("Test")
-                .paymentMethod(Expense.PaymentMethod.CASH)
+                .paymentMethod(PaymentMethod.CASH)
                 .user(testUser)
                 .build();
         testExpense = expenseRepository.save(testExpense);
@@ -69,7 +70,7 @@ class ExpenseServiceIntegrationTest extends AbstractIntegrationTest {
                 .amount(new BigDecimal("150.00"))
                 .date(LocalDate.now())
                 .category("Food")
-                .paymentMethod(Expense.PaymentMethod.CREDIT_CARD)
+                .paymentMethod(PaymentMethod.CREDIT_CARD)
                 .userId(testUser.getId())
                 .build();
 
@@ -158,7 +159,7 @@ class ExpenseServiceIntegrationTest extends AbstractIntegrationTest {
                 .amount(new BigDecimal("50.00"))
                 .date(LocalDate.now())
                 .category("Entertainment")
-                .paymentMethod(Expense.PaymentMethod.DEBIT_CARD)
+                .paymentMethod(PaymentMethod.DEBIT_CARD)
                 .user(testUser)
                 .build();
         expenseRepository.save(anotherExpense);
@@ -179,7 +180,7 @@ class ExpenseServiceIntegrationTest extends AbstractIntegrationTest {
                 .amount(new BigDecimal("75.00"))
                 .date(LocalDate.now())
                 .category("Food")
-                .paymentMethod(Expense.PaymentMethod.CASH)
+                .paymentMethod(PaymentMethod.CASH)
                 .user(testUser)
                 .build();
         expenseRepository.save(foodExpense);
