@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
@@ -157,4 +158,56 @@ class RecurringExpenseServiceTest {
         RecurringExpense savedTemplate = recurringCaptor.getValue();
         Assertions.assertEquals(today.plusDays(1), savedTemplate.getNextOccurrenceDate());
     }
+
+
+    @Test
+    void whenNextOccurrenceEqualsEndDate_thenCreatesExpense_and_deactivatesTemplate() {
+        LocalDate today = LocalDate.now();
+        RecurringExpense template = new RecurringExpense();
+        template.setUserId(1L);
+        template.setNextOccurrenceDate(today);
+        template.setEndDate(today);
+        template.setRecurrenceType(RecurrenceType.DAILY);
+        template.setInterval(1);
+        template.setCategory("subscription");
+        template.setAmount(BigDecimal.valueOf(9.99));
+        template.setActive(true);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        service.processRecurringTemplate(template);
+
+        verify(expenseRepo, times(1)).save(any(Expense.class));
+
+        verify(recurringRepo, times(1)).save(recurringCaptor.capture());
+        RecurringExpense savedTemplate = recurringCaptor.getValue();
+        Assertions.assertFalse(savedTemplate.isActive(), "Template must be deactivated after final occurrence");
+        Assertions.assertEquals(today, savedTemplate.getNextOccurrenceDate());
+    }
+
+
+    @Test
+    void whenNextOccurrenceAfterEndDate_thenNoExpense_and_deactivatesTemplate() {
+        LocalDate today = LocalDate.now();
+        RecurringExpense template = new RecurringExpense();
+        template.setUserId(1L);
+        template.setNextOccurrenceDate(today);
+        template.setEndDate(today.minusDays(1));
+        template.setRecurrenceType(RecurrenceType.DAILY);
+        template.setInterval(1);
+        template.setCategory("subscription");
+        template.setAmount(BigDecimal.valueOf(9.99));
+        template.setActive(true);
+
+
+        service.processRecurringTemplate(template);
+
+        verify(expenseRepo, never()).save(any(Expense.class));
+
+        verify(recurringRepo, times(1)).save(recurringCaptor.capture());
+        RecurringExpense savedTemplate = recurringCaptor.getValue();
+        Assertions.assertFalse(savedTemplate.isActive(), "Template must be deactivated when next occurrence is after endDate");
+        Assertions.assertEquals(today, savedTemplate.getNextOccurrenceDate());
+    }
+
 }

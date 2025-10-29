@@ -8,7 +8,7 @@ import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class RecurrenceUtilsCriticalTest {
+class RecurrenceUtilsTest {
 
     @Test
     void nextOccurrence_monthly_lastDay_fromApr30_toMay31() {
@@ -48,5 +48,19 @@ class RecurrenceUtilsCriticalTest {
                 RecurrenceUtils.nextOccurrence(current, RecurrenceType.DAILY, 0));
         assertThrows(IllegalArgumentException.class, () ->
                 RecurrenceUtils.nextOccurrence(current, RecurrenceType.DAILY, -5));
+    }
+
+    @Test
+    void nextOccurrence_monthly_fromJan31_toFeb28_nonLeapYear() {
+        LocalDate current = LocalDate.of(2025, 1, 31);
+        LocalDate next = RecurrenceUtils.nextOccurrence(current, RecurrenceType.MONTHLY, 1);
+        assertEquals(LocalDate.of(2025, 2, 28), next);
+    }
+
+    @Test
+    void nextOccurrence_monthly_fromJan31_toFeb29_leapYear() {
+        LocalDate current = LocalDate.of(2024, 1, 31);
+        LocalDate next = RecurrenceUtils.nextOccurrence(current, RecurrenceType.MONTHLY, 1);
+        assertEquals(LocalDate.of(2024, 2, 29), next);
     }
 }
