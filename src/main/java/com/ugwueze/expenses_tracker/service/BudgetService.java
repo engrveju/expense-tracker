@@ -18,4 +18,5 @@ public interface BudgetService {
     BudgetDto getCurrentBudgetForCategory(Long userId, String category);
 
     boolean isBudgetExceeded(Long userId, String category);
+
 }
