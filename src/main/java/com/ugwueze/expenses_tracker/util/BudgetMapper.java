@@ -3,12 +3,14 @@ package com.ugwueze.expenses_tracker.util;
 import com.ugwueze.expenses_tracker.dto.BudgetDto;
 import com.ugwueze.expenses_tracker.entity.Budget;
 import com.ugwueze.expenses_tracker.entity.User;
+import org.springframework.stereotype.Component;
 
+@Component
 public final class BudgetMapper {
 
     private BudgetMapper() {}
 
-    public static BudgetDto toDto(Budget budget) {
+    public BudgetDto toDto(Budget budget) {
         if (budget == null) return null;
         return BudgetDto.builder()
                 .id(budget.getId())
