@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
 
@@ -44,6 +46,9 @@ class RecurringExpenseServiceTest {
 
     @Captor
     ArgumentCaptor<RecurringExpense> recurringCaptor;
+
+    @Captor
+    ArgumentCaptor<Expense> expenseCaptor;
 
     private User testUser;
 
@@ -181,7 +186,7 @@ class RecurringExpenseServiceTest {
 
         verify(recurringRepo, times(1)).save(recurringCaptor.capture());
         RecurringExpense savedTemplate = recurringCaptor.getValue();
-        Assertions.assertFalse(savedTemplate.isActive(), "Template must be deactivated after final occurrence");
+        assertFalse(savedTemplate.isActive(), "Template must be deactivated after final occurrence");
         Assertions.assertEquals(today, savedTemplate.getNextOccurrenceDate());
     }
 
@@ -206,8 +211,91 @@ class RecurringExpenseServiceTest {
 
         verify(recurringRepo, times(1)).save(recurringCaptor.capture());
         RecurringExpense savedTemplate = recurringCaptor.getValue();
-        Assertions.assertFalse(savedTemplate.isActive(), "Template must be deactivated when next occurrence is after endDate");
+        assertFalse(savedTemplate.isActive(), "Template must be deactivated when next occurrence is after endDate");
         Assertions.assertEquals(today, savedTemplate.getNextOccurrenceDate());
+    }
+
+    @Test
+    void processRecurringTemplate_intervalGreaterThanOne_createsExpense_then_deactivates_if_nextAfterEnd() {
+        LocalDate today = LocalDate.now();
+        RecurringExpense template = new RecurringExpense();
+        template.setUserId(1L);
+        template.setNextOccurrenceDate(today);
+
+        template.setEndDate(today.plusDays(1));
+        template.setRecurrenceType(RecurrenceType.DAILY);
+        template.setInterval(2);
+        template.setCategory("subscription");
+        template.setAmount(BigDecimal.valueOf(9.99));
+        template.setActive(true);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        service.processRecurringTemplate(template);
+
+        verify(expenseRepo, times(1)).save(expenseCaptor.capture());
+        Expense created = expenseCaptor.getValue();
+        Assertions.assertEquals(today, created.getDate());
+
+        verify(recurringRepo, times(1)).save(recurringCaptor.capture());
+        RecurringExpense savedTemplate = recurringCaptor.getValue();
+        assertFalse(savedTemplate.isActive(), "Template must be deactivated when next occurrence falls after endDate");
+        Assertions.assertEquals(today, savedTemplate.getNextOccurrenceDate());
+    }
+
+    @Test
+    void processRecurringTemplate_endDateNull_keepsTemplateActive_and_updatesNextOccurrence() {
+        LocalDate today = LocalDate.now();
+        RecurringExpense template = new RecurringExpense();
+        template.setUserId(1L);
+        template.setNextOccurrenceDate(today);
+        template.setEndDate(null);
+        template.setRecurrenceType(RecurrenceType.WEEKLY);
+        template.setInterval(2);
+        template.setCategory("gym");
+        template.setAmount(BigDecimal.valueOf(20));
+        template.setActive(true);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        service.processRecurringTemplate(template);
+
+        verify(expenseRepo, times(1)).save(any(Expense.class));
+
+        verify(recurringRepo, times(1)).save(recurringCaptor.capture());
+        RecurringExpense saved = recurringCaptor.getValue();
+        Assertions.assertTrue(saved.isActive());
+        Assertions.assertEquals(today.plusWeeks(2), saved.getNextOccurrenceDate());
+    }
+
+    @Test
+    void processDueRecurringExpenses_processesAllDueTemplates() {
+        LocalDate today = LocalDate.now();
+        RecurringExpense t1 = new RecurringExpense();
+        t1.setUserId(1L);
+        t1.setNextOccurrenceDate(today);
+        t1.setRecurrenceType(RecurrenceType.DAILY);
+        t1.setInterval(1);
+        t1.setCategory("one");
+        t1.setAmount(BigDecimal.valueOf(1));
+        t1.setActive(true);
+
+        RecurringExpense t2 = new RecurringExpense();
+        t2.setUserId(1L);
+        t2.setNextOccurrenceDate(today);
+        t2.setRecurrenceType(RecurrenceType.MONTHLY);
+        t2.setInterval(1);
+        t2.setCategory("two");
+        t2.setAmount(BigDecimal.valueOf(2));
+        t2.setActive(true);
+
+        when(recurringRepo.findDueByDate(today)).thenReturn(Collections.singletonList(t1));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        service.processDueRecurringExpenses();
+
+        verify(expenseRepo, times(1)).save(any(Expense.class));
+        verify(recurringRepo, atLeastOnce()).save(any(RecurringExpense.class));
     }
 
 }
