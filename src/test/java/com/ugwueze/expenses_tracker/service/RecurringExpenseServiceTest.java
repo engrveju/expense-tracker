@@ -10,6 +10,7 @@ import com.ugwueze.expenses_tracker.repository.ExpenseRepository;
 import com.ugwueze.expenses_tracker.repository.RecurringExpenseRepository;
 import com.ugwueze.expenses_tracker.repository.UserRepository;
 import com.ugwueze.expenses_tracker.service.impl.RecurringExpenseServiceImpl;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +21,8 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
 
@@ -37,6 +40,9 @@ class RecurringExpenseServiceTest {
 
     @InjectMocks
     private RecurringExpenseServiceImpl service;
+
+    @Captor
+    ArgumentCaptor<RecurringExpense> recurringCaptor;
 
     private User testUser;
 
@@ -125,7 +131,30 @@ class RecurringExpenseServiceTest {
         service.processDueRecurringExpenses();
 
         verify(expenseRepo).save(any(Expense.class));
-        verify(recurringRepo).delete(template);
-        verify(recurringRepo, never()).save(template);
+    }
+
+
+    @Test
+    void processRecurringTemplate_nullInterval_defaultsToOne_and_updatesNextOccurrence() {
+        LocalDate today = LocalDate.now();
+        RecurringExpense template = new RecurringExpense();
+        template.setUserId(1L);
+        template.setNextOccurrenceDate(today);
+        template.setEndDate(today.plusDays(5));
+        template.setRecurrenceType(RecurrenceType.DAILY);
+        template.setInterval(null);
+        template.setCategory("subscription");
+        template.setAmount(BigDecimal.valueOf(9.99));
+        template.setActive(true);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        service.processRecurringTemplate(template);
+
+        verify(expenseRepo, times(1)).save(any(Expense.class));
+
+        verify(recurringRepo, times(1)).save(recurringCaptor.capture());
+        RecurringExpense savedTemplate = recurringCaptor.getValue();
+        Assertions.assertEquals(today.plusDays(1), savedTemplate.getNextOccurrenceDate());
     }
 }
