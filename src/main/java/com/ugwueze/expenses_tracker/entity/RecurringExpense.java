@@ -32,30 +32,14 @@ public class RecurringExpense {
 
     private String description;
 
+    private Integer interval = 1;
+
+    private boolean active;
+
     public RecurringExpense() {
 
     }
 
-    public void advanceNextOccurrence() {
-        if (recurrenceType == RecurrenceType.WEEKLY) {
-            nextOccurrenceDate = nextOccurrenceDate.plusWeeks(1);
-        } else if (recurrenceType == RecurrenceType.MONTHLY) {
-            nextOccurrenceDate = nextOccurrenceDate.plusMonths(1);
-        } else if (recurrenceType == RecurrenceType.YEARLY) {
-            nextOccurrenceDate = nextOccurrenceDate.plusYears(1);
-        }
-    }
-
-    public RecurringExpense(Long id, Long userId, String category, PaymentMethod paymentMethod, BigDecimal amount, RecurrenceType recurrenceType, LocalDate nextOccurrenceDate, LocalDate endDate) {
-        this.id = id;
-        this.userId = userId;
-        this.category = category;
-        this.paymentMethod = paymentMethod;
-        this.amount = amount;
-        this.recurrenceType = recurrenceType;
-        this.nextOccurrenceDate = nextOccurrenceDate;
-        this.endDate = endDate;
-    }
 
     public Long getId() {
         return id;
@@ -123,5 +107,21 @@ public class RecurringExpense {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public Integer getInterval() {
+        return interval;
+    }
+
+    public void setInterval(Integer interval) {
+        this.interval = interval;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }
