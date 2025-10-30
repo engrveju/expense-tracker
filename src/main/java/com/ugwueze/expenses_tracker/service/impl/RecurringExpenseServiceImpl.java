@@ -41,27 +41,68 @@ public class RecurringExpenseServiceImpl implements RecurringExpenseService {
     }
 
 
+    @Transactional
     public void processRecurringTemplate(RecurringExpense template) {
+        if (template == null) {
+            return;
+        }
+        if (!template.isActive()) {
+            return;
+        }
+
+        LocalDate processingDate = LocalDate.now();
         LocalDate candidate = template.getNextOccurrenceDate();
         LocalDate endDate = template.getEndDate();
-        RecurrenceType type = convertToUtilsType(template.getRecurrenceType());
+        RecurrenceType recurrenceType = template.getRecurrenceType();
         int interval = template.getInterval() == null ? 1 : template.getInterval();
 
-        if (RecurrenceUtils.isOccurrenceWithinEndDate(candidate, endDate)) {
-            createExpenseFromTemplate(template, candidate);
-
-            LocalDate newNext = RecurrenceUtils.nextOccurrence(candidate, type, interval);
-            if (!RecurrenceUtils.isOccurrenceWithinEndDate(newNext, endDate)) {
-                template.setActive(false);
-                recurringExpenseRepository.save(template);
-            } else {
-                template.setNextOccurrenceDate(newNext);
-                recurringExpenseRepository.save(template);
-            }
-        } else {
+        if (candidate == null) {
             template.setActive(false);
             recurringExpenseRepository.save(template);
+            return;
         }
+
+        if (interval <= 0) {
+            template.setActive(false);
+            recurringExpenseRepository.save(template);
+            return;
+        }
+
+        RecurrenceType utilsType = convertToUtilsType(recurrenceType);
+
+        if (!RecurrenceUtils.isOccurrenceWithinEndDate(candidate, endDate)) {
+            template.setActive(false);
+            recurringExpenseRepository.save(template);
+            return;
+        }
+
+        int createdCount = 0;
+        int safetyLimit = 1000;
+        int iterations = 0;
+
+        while (candidate != null
+                && RecurrenceUtils.isOccurrenceWithinEndDate(candidate, endDate)
+                && !candidate.isAfter(processingDate)
+                && iterations < safetyLimit) {
+
+            createExpenseFromTemplate(template, candidate);
+            createdCount++;
+
+            candidate = RecurrenceUtils.nextOccurrence(candidate, utilsType, interval);
+            iterations++;
+        }
+
+        if (iterations >= safetyLimit) {
+
+            recurringExpenseRepository.save(template);
+            return;
+        }
+
+        if (!RecurrenceUtils.isOccurrenceWithinEndDate(candidate, endDate)) {
+            template.setActive(false);
+        }
+        template.setNextOccurrenceDate(candidate);
+        recurringExpenseRepository.save(template);
     }
 
     private void createExpenseFromTemplate(RecurringExpense template, LocalDate occurrenceDate) {

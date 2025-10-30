@@ -65,9 +65,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleGlobalException(
             Exception ex, WebRequest request) {
 
-        System.out.println(">>>eeee>>");
-        ex.printStackTrace();
-
         ApiResponse<Object> response = ApiResponse.error("An unexpected error occurred");
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }

@@ -23,8 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
@@ -74,6 +73,7 @@ class RecurringExpenseServiceTest {
         verify(recurringRepo, never()).save(any(RecurringExpense.class));
     }
 
+
     @Test
     void whenTemplateDue_thenExpenseCreatedAndNextOccurrenceAdvanced() {
         LocalDate today = LocalDate.now();
@@ -86,6 +86,8 @@ class RecurringExpenseServiceTest {
         template.setRecurrenceType(RecurrenceType.MONTHLY);
         template.setNextOccurrenceDate(today.minusDays(0));
         template.setEndDate(null);
+        template.setActive(true);
+        template.setInterval(1);
 
         when(recurringRepo.findDueByDate(any(LocalDate.class)))
                 .thenReturn(List.of(template));
@@ -125,6 +127,8 @@ class RecurringExpenseServiceTest {
         template.setRecurrenceType(RecurrenceType.YEARLY);
         template.setNextOccurrenceDate(today.minusDays(0));
         template.setEndDate(today);
+        template.setActive(true);
+        template.setInterval(1);
 
         when(userRepository.findById(testUser.getId()))
                 .thenReturn(Optional.ofNullable(testUser));
@@ -138,6 +142,7 @@ class RecurringExpenseServiceTest {
 
         verify(expenseRepo).save(any(Expense.class));
     }
+
 
 
     @Test
@@ -187,7 +192,7 @@ class RecurringExpenseServiceTest {
         verify(recurringRepo, times(1)).save(recurringCaptor.capture());
         RecurringExpense savedTemplate = recurringCaptor.getValue();
         assertFalse(savedTemplate.isActive(), "Template must be deactivated after final occurrence");
-        Assertions.assertEquals(today, savedTemplate.getNextOccurrenceDate());
+        Assertions.assertEquals(today.plusDays(1), savedTemplate.getNextOccurrenceDate());
     }
 
 
@@ -203,8 +208,6 @@ class RecurringExpenseServiceTest {
         template.setCategory("subscription");
         template.setAmount(BigDecimal.valueOf(9.99));
         template.setActive(true);
-
-
         service.processRecurringTemplate(template);
 
         verify(expenseRepo, never()).save(any(Expense.class));
@@ -214,6 +217,7 @@ class RecurringExpenseServiceTest {
         assertFalse(savedTemplate.isActive(), "Template must be deactivated when next occurrence is after endDate");
         Assertions.assertEquals(today, savedTemplate.getNextOccurrenceDate());
     }
+
 
     @Test
     void processRecurringTemplate_intervalGreaterThanOne_createsExpense_then_deactivates_if_nextAfterEnd() {
@@ -240,8 +244,9 @@ class RecurringExpenseServiceTest {
         verify(recurringRepo, times(1)).save(recurringCaptor.capture());
         RecurringExpense savedTemplate = recurringCaptor.getValue();
         assertFalse(savedTemplate.isActive(), "Template must be deactivated when next occurrence falls after endDate");
-        Assertions.assertEquals(today, savedTemplate.getNextOccurrenceDate());
+        Assertions.assertEquals(today.plusDays(2), savedTemplate.getNextOccurrenceDate());
     }
+
 
     @Test
     void processRecurringTemplate_endDateNull_keepsTemplateActive_and_updatesNextOccurrence() {
@@ -296,6 +301,153 @@ class RecurringExpenseServiceTest {
 
         verify(expenseRepo, times(1)).save(any(Expense.class));
         verify(recurringRepo, atLeastOnce()).save(any(RecurringExpense.class));
+    }
+
+
+    // java
+    @Test
+    void createsAllMissedWeeklyOccurrences_upToToday_and_updatesNextOccurrence() {
+        LocalDate today = LocalDate.now();
+        LocalDate candidate = today.minusWeeks(2);
+
+        RecurringExpense template = new RecurringExpense();
+        template.setId(1L);
+        template.setUserId(testUser.getId());
+        template.setNextOccurrenceDate(candidate);
+        template.setRecurrenceType(RecurrenceType.WEEKLY);
+        template.setInterval(1);
+        template.setActive(true);
+
+        when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
+
+        service.processRecurringTemplate(template);
+
+        verify(expenseRepo, times(3)).save(expenseCaptor.capture());
+        List<Expense> saved = expenseCaptor.getAllValues();
+        Assertions.assertEquals(3, saved.size());
+        Assertions.assertEquals(candidate, saved.get(0).getDate());
+        Assertions.assertEquals(candidate.plusWeeks(1), saved.get(1).getDate());
+        Assertions.assertEquals(candidate.plusWeeks(2), saved.get(2).getDate());
+
+        ArgumentCaptor<RecurringExpense> templateCaptor = ArgumentCaptor.forClass(RecurringExpense.class);
+        verify(recurringRepo, times(1)).save(templateCaptor.capture());
+        RecurringExpense savedTemplate = templateCaptor.getValue();
+        Assertions.assertNotNull(savedTemplate.getNextOccurrenceDate());
+        Assertions.assertEquals(today.plusWeeks(1), savedTemplate.getNextOccurrenceDate());
+        Assertions.assertTrue(savedTemplate.isActive());
+    }
+
+    @Test
+    void createsOccurrencesOnlyUpToEndDate_and_deactivatesTemplateWhenEndDatePassed() {
+        LocalDate today = LocalDate.now();
+        LocalDate candidate = today.minusDays(2);
+        LocalDate endDate = today.minusDays(1);
+
+        RecurringExpense template = new RecurringExpense();
+        template.setId(2L);
+        template.setUserId(testUser.getId());
+        template.setNextOccurrenceDate(candidate);
+        template.setRecurrenceType(RecurrenceType.DAILY);
+        template.setInterval(1);
+        template.setEndDate(endDate);
+        template.setActive(true);
+
+        when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
+
+        service.processRecurringTemplate(template);
+
+        verify(expenseRepo, times(2)).save(expenseCaptor.capture());
+        List<Expense> saved = expenseCaptor.getAllValues();
+        Assertions.assertEquals(candidate, saved.get(0).getDate());
+        Assertions.assertEquals(candidate.plusDays(1), saved.get(1).getDate());
+
+        ArgumentCaptor<RecurringExpense> templateCaptor = ArgumentCaptor.forClass(RecurringExpense.class);
+        verify(recurringRepo, times(1)).save(templateCaptor.capture());
+        RecurringExpense savedTemplate = templateCaptor.getValue();
+        assertFalse(savedTemplate.isActive(), "template should be deactivated when endDate reached");
+        Assertions.assertTrue(savedTemplate.getNextOccurrenceDate() == null || savedTemplate.getNextOccurrenceDate().isAfter(endDate));
+    }
+
+    @Test
+    void invalidInterval_deactivatesTemplate_and_noExpensesCreated() {
+        LocalDate today = LocalDate.now();
+
+        RecurringExpense template = new RecurringExpense();
+        template.setId(3L);
+        template.setUserId(testUser.getId());
+        template.setNextOccurrenceDate(today);
+        template.setRecurrenceType(RecurrenceType.DAILY);
+        template.setInterval(0);
+        template.setActive(true);
+
+        // no need to stub userRepository since no expense creation should occur, but setting userId is harmless
+        service.processRecurringTemplate(template);
+
+        verifyNoInteractions(expenseRepo);
+        ArgumentCaptor<RecurringExpense> templateCaptor = ArgumentCaptor.forClass(RecurringExpense.class);
+        verify(recurringRepo, times(1)).save(templateCaptor.capture());
+        RecurringExpense savedTemplate = templateCaptor.getValue();
+        assertFalse(savedTemplate.isActive());
+    }
+
+    @Test
+    void safetyCap_preventsInfiniteLoop_and_persistsTemplateOnHit() {
+        LocalDate today = LocalDate.now();
+        LocalDate candidate = today.minusDays(2000);
+
+        RecurringExpense template = new RecurringExpense();
+        template.setId(4L);
+        template.setUserId(testUser.getId());
+        template.setNextOccurrenceDate(candidate);
+        template.setRecurrenceType(RecurrenceType.DAILY);
+        template.setInterval(1);
+        template.setActive(true);
+
+        when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
+
+        service.processRecurringTemplate(template);
+        verify(expenseRepo, atLeast(1)).save(any(Expense.class));
+        verify(recurringRepo, atLeast(1)).save(any(RecurringExpense.class));
+    }
+
+    @Test
+    void processRecurringTemplate_nullNextOccurrence_deactivatesTemplate() {
+        RecurringExpense template = new RecurringExpense();
+        template.setId(5L);
+        template.setUserId(testUser.getId());
+        template.setNextOccurrenceDate(null);
+        template.setRecurrenceType(RecurrenceType.DAILY);
+        template.setInterval(1);
+        template.setActive(true);
+
+        service.processRecurringTemplate(template);
+
+        ArgumentCaptor<RecurringExpense> templateCaptor = ArgumentCaptor.forClass(RecurringExpense.class);
+        verify(recurringRepo, times(1)).save(templateCaptor.capture());
+        RecurringExpense savedTemplate = templateCaptor.getValue();
+        assertFalse(savedTemplate.isActive(), "Template should be deactivated when nextOccurrenceDate is null");
+        Assertions.assertNull(savedTemplate.getNextOccurrenceDate(), "nextOccurrenceDate should remain null");
+    }
+
+    @Test
+    void processRecurringTemplate_expenseCreationFails_transactionRollsBackAndTemplateNotSaved() {
+        LocalDate today = LocalDate.now();
+
+        RecurringExpense template = new RecurringExpense();
+        template.setId(6L);
+        template.setUserId(testUser.getId());
+        template.setNextOccurrenceDate(today);
+        template.setRecurrenceType(RecurrenceType.DAILY);
+        template.setInterval(1);
+        template.setActive(true);
+
+        when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
+        when(expenseRepo.save(any(Expense.class))).thenThrow(new RuntimeException("simulated db failure"));
+
+        Assertions.assertThrows(RuntimeException.class, () -> service.processRecurringTemplate(template));
+
+        verify(expenseRepo, atLeastOnce()).save(any(Expense.class));
+        verify(recurringRepo, never()).save(any(RecurringExpense.class));
     }
 
 }
