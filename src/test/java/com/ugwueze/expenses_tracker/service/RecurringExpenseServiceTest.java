@@ -304,7 +304,6 @@ class RecurringExpenseServiceTest {
     }
 
 
-    // java
     @Test
     void createsAllMissedWeeklyOccurrences_upToToday_and_updatesNextOccurrence() {
         LocalDate today = LocalDate.now();
@@ -380,7 +379,6 @@ class RecurringExpenseServiceTest {
         template.setInterval(0);
         template.setActive(true);
 
-        // no need to stub userRepository since no expense creation should occur, but setting userId is harmless
         service.processRecurringTemplate(template);
 
         verifyNoInteractions(expenseRepo);
