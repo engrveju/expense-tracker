@@ -410,4 +410,44 @@ class RecurringExpenseServiceTest {
         verify(recurringRepo, atLeast(1)).save(any(RecurringExpense.class));
     }
 
+    @Test
+    void processRecurringTemplate_nullNextOccurrence_deactivatesTemplate() {
+        RecurringExpense template = new RecurringExpense();
+        template.setId(5L);
+        template.setUserId(testUser.getId());
+        template.setNextOccurrenceDate(null);
+        template.setRecurrenceType(RecurrenceType.DAILY);
+        template.setInterval(1);
+        template.setActive(true);
+
+        service.processRecurringTemplate(template);
+
+        ArgumentCaptor<RecurringExpense> templateCaptor = ArgumentCaptor.forClass(RecurringExpense.class);
+        verify(recurringRepo, times(1)).save(templateCaptor.capture());
+        RecurringExpense savedTemplate = templateCaptor.getValue();
+        assertFalse(savedTemplate.isActive(), "Template should be deactivated when nextOccurrenceDate is null");
+        Assertions.assertNull(savedTemplate.getNextOccurrenceDate(), "nextOccurrenceDate should remain null");
+    }
+
+    @Test
+    void processRecurringTemplate_expenseCreationFails_transactionRollsBackAndTemplateNotSaved() {
+        LocalDate today = LocalDate.now();
+
+        RecurringExpense template = new RecurringExpense();
+        template.setId(6L);
+        template.setUserId(testUser.getId());
+        template.setNextOccurrenceDate(today);
+        template.setRecurrenceType(RecurrenceType.DAILY);
+        template.setInterval(1);
+        template.setActive(true);
+
+        when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
+        when(expenseRepo.save(any(Expense.class))).thenThrow(new RuntimeException("simulated db failure"));
+
+        Assertions.assertThrows(RuntimeException.class, () -> service.processRecurringTemplate(template));
+
+        verify(expenseRepo, atLeastOnce()).save(any(Expense.class));
+        verify(recurringRepo, never()).save(any(RecurringExpense.class));
+    }
+
 }
