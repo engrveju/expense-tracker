@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -75,6 +76,7 @@ class RecurringExpenseControllerTest extends AbstractIntegrationTest {
         assertEquals(RecurrenceType.WEEKLY, saved.getRecurrenceType());
     }
 
+
     @Test
     void triggerProcess_advancesNextOccurrenceDate_forDueExpense() throws Exception {
         User user = User.builder()
@@ -92,6 +94,7 @@ class RecurringExpenseControllerTest extends AbstractIntegrationTest {
         due.setAmount(BigDecimal.valueOf(10.0));
         due.setRecurrenceType(RecurrenceType.WEEKLY);
         due.setDescription("Weekly Subscription");
+        due.setActive(true);
         LocalDate oldDate = LocalDate.now().minusDays(1);
         due.setNextOccurrenceDate(oldDate);
         due = repo.save(due);
@@ -103,5 +106,6 @@ class RecurringExpenseControllerTest extends AbstractIntegrationTest {
         assertTrue(updated.getNextOccurrenceDate().isAfter(oldDate),
                 "Next occurrence date should be advanced after processing");
     }
+
 
 }
