@@ -3,6 +3,7 @@ package com.ugwueze.expenses_tracker.controller;
 import com.ugwueze.expenses_tracker.dto.ApiResponse;
 import com.ugwueze.expenses_tracker.dto.ExpenseDto;
 import com.ugwueze.expenses_tracker.dto.ExpenseSummaryDto;
+import com.ugwueze.expenses_tracker.dto.MonthlySummaryDto;
 import com.ugwueze.expenses_tracker.service.ExpenseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -118,5 +119,17 @@ public class ExpenseController {
             @PathVariable Long userId, @PathVariable String category) {
         List<ExpenseDto> expenses = expenseService.getExpensesByCategory(userId, category);
         return ResponseEntity.ok(ApiResponse.success(expenses));
+    }
+
+    @GetMapping("/monthly")
+    public ResponseEntity<List<MonthlySummaryDto>> getMonthlySummary(
+            @RequestParam(name = "year") Integer year,
+            @RequestParam(name = "month") Integer month
+    ) {
+        if (year == null || month == null || month < 1 || month > 12) {
+            return ResponseEntity.badRequest().build();
+        }
+        List<MonthlySummaryDto> summary = expenseService.getMonthlySummary(year, month);
+        return ResponseEntity.ok(summary);
     }
 }

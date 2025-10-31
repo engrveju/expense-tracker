@@ -2,6 +2,7 @@ package com.ugwueze.expenses_tracker.service;
 
 import com.ugwueze.expenses_tracker.dto.ExpenseDto;
 import com.ugwueze.expenses_tracker.dto.ExpenseSummaryDto;
+import com.ugwueze.expenses_tracker.dto.MonthlySummaryDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,4 +36,7 @@ public interface ExpenseService {
 
     @Transactional(readOnly = true)
     Map<Integer, BigDecimal> getMonthlyExpensesSummary(Long userId, int year);
+
+    @Transactional(readOnly = true)
+    List<MonthlySummaryDto> getMonthlySummary(int year, int month);
 }

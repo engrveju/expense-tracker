@@ -46,4 +46,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     Page<Expense> findByUserIdAndDateGreaterThanEqual(Long userId, LocalDate startDate,Pageable pageable);
 
     Page<Expense> findByUserIdAndDateLessThanEqual(Long userId, LocalDate endDate,Pageable pageable);
+
+    @Query("SELECT e.category, SUM(e.amount) FROM Expense e  WHERE YEAR(e.date) = :year AND MONTH(e.date) = :month GROUP BY e.category ORDER BY SUM(e.amount) DESC")
+    List<Object[]> findCategoryTotalsByYearAndMonth(@Param("year") int year, @Param("month") int month);
 }

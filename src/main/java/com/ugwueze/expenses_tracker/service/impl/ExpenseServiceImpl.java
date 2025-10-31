@@ -2,6 +2,7 @@ package com.ugwueze.expenses_tracker.service.impl;
 
 import com.ugwueze.expenses_tracker.dto.ExpenseDto;
 import com.ugwueze.expenses_tracker.dto.ExpenseSummaryDto;
+import com.ugwueze.expenses_tracker.dto.MonthlySummaryDto;
 import com.ugwueze.expenses_tracker.entity.Expense;
 import com.ugwueze.expenses_tracker.entity.User;
 import com.ugwueze.expenses_tracker.exception.ResourceNotFoundException;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -209,6 +211,22 @@ public class ExpenseServiceImpl implements ExpenseService {
                         java.util.LinkedHashMap::new
                 ));
 
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<MonthlySummaryDto> getMonthlySummary(int year, int month) {
+        List<Object[]> rows = expenseRepository.findCategoryTotalsByYearAndMonth(year, month);
+        List<MonthlySummaryDto> result = new ArrayList<>(rows.size());
+        BigDecimal overall = BigDecimal.ZERO;
+
+        for (Object[] row : rows) {
+            String category = row[0] != null ? row[0].toString() : "Uncategorized";
+            BigDecimal total = row[1] instanceof BigDecimal ? (BigDecimal) row[1] : new BigDecimal(row[1].toString());
+            overall = overall.add(total);
+            result.add(new MonthlySummaryDto(category, total));
+        }
         return result;
     }
 
