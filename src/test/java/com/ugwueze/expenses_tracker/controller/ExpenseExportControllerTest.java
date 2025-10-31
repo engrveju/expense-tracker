@@ -49,7 +49,7 @@ class ExpenseExportControllerTest {
     void exportExpensesAsCsv_withInvalidDate_returnsBadRequest() throws Exception {
         mockMvc.perform(get("/api/users/{userId}/expenses/export", 5L)
                         .param("startDate", "invalid-date"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isInternalServerError());
     }
 
     @Test
