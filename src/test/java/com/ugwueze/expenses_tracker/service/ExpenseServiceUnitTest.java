@@ -1,6 +1,7 @@
 package com.ugwueze.expenses_tracker.service;
 
 import com.ugwueze.expenses_tracker.dto.ExpenseDto;
+import com.ugwueze.expenses_tracker.dto.MonthlySummaryDto;
 import com.ugwueze.expenses_tracker.entity.Expense;
 import com.ugwueze.expenses_tracker.entity.User;
 import com.ugwueze.expenses_tracker.enums.PaymentMethod;
@@ -23,9 +24,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -255,6 +254,101 @@ class ExpenseServiceUnitTest {
         assertFalse(result.containsKey(4));
         assertTrue(result.containsKey(5));
         assertEquals(0, result.get(5).compareTo(new BigDecimal("20.00")));
+    }
+
+
+    @Test
+    void getMonthlySummary_returnsMappedDto_whenRepositoryReturnsValidRows() {
+        Object[] row1 = new Object[]{"Food", new BigDecimal("100.50")};
+        Object[] row2 = new Object[]{"Transport", new BigDecimal("20.00")};
+        when(expenseRepository.findCategoryTotalsByYearAndMonth(2025, 10))
+                .thenReturn(Arrays.asList(row1, row2));
+
+        List<MonthlySummaryDto> result = expenseService.getMonthlySummary(2025, 10);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+
+        MonthlySummaryDto first = result.get(0);
+        assertEquals("Food", first.getCategory());
+        assertEquals(new BigDecimal("100.50"), first.getTotal());
+
+        MonthlySummaryDto second = result.get(1);
+        assertEquals("Transport", second.getCategory());
+        assertEquals(new BigDecimal("20.00"), second.getTotal());
+
+        verify(expenseRepository, times(1)).findCategoryTotalsByYearAndMonth(2025, 10);
+    }
+
+    @Test
+    void getMonthlySummary_convertsDifferentNumericTypes_toBigDecimal() {
+
+        Object[] r1 = new Object[]{"Groceries", 45.5};
+        Object[] r2 = new Object[]{"Bills", 100L};
+        Object[] r3 = new Object[]{"Coffee", 3};
+        Object[] r4 = new Object[]{"Misc", "12.34"};
+        when(expenseRepository.findCategoryTotalsByYearAndMonth(2025, 9))
+                .thenReturn(Arrays.asList(r1, r2, r3, r4));
+
+        List<MonthlySummaryDto> result = expenseService.getMonthlySummary(2025, 9);
+
+        assertEquals(4, result.size());
+        assertEquals(new BigDecimal("45.5"), result.get(0).getTotal());
+        assertEquals(new BigDecimal("100"), result.get(1).getTotal());
+        assertEquals(new BigDecimal("3"), result.get(2).getTotal());
+        assertEquals(new BigDecimal("12.34"), result.get(3).getTotal());
+    }
+
+    @Test
+    void getMonthlySummary_handlesNullCategory_asUncategorized() {
+        Object[] r = new Object[]{null, new BigDecimal("5.00")};
+        when(expenseRepository.findCategoryTotalsByYearAndMonth(2024, 12))
+                .thenReturn(Collections.singletonList(r));
+
+        List<MonthlySummaryDto> result = expenseService.getMonthlySummary(2024, 12);
+
+        assertEquals(1, result.size());
+        MonthlySummaryDto dto = result.get(0);
+        assertEquals("Uncategorized", dto.getCategory());
+        assertEquals(new BigDecimal("5.00"), dto.getTotal());
+    }
+
+    @Test
+    void getMonthlySummary_returnsEmptyList_whenRepositoryReturnsEmpty() {
+        when(expenseRepository.findCategoryTotalsByYearAndMonth(2023, 1))
+                .thenReturn(Collections.emptyList());
+
+        List<MonthlySummaryDto> result = expenseService.getMonthlySummary(2023, 1);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getMonthlySummary_propagatesException_whenRepositoryThrows() {
+        when(expenseRepository.findCategoryTotalsByYearAndMonth(2022, 7))
+                .thenThrow(new RuntimeException("DB error"));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> expenseService.getMonthlySummary(2022, 7));
+        assertEquals("DB error", ex.getMessage());
+    }
+
+    @Test
+    void getMonthlySummary_throws_whenTotalIsNull_inRow() {
+        Object[] r = new Object[]{"Some", null};
+        when(expenseRepository.findCategoryTotalsByYearAndMonth(2025, 11))
+                .thenReturn(Collections.singletonList(r));
+
+        assertThrows(NullPointerException.class, () -> expenseService.getMonthlySummary(2025, 11));
+    }
+
+    @Test
+    void getMonthlySummary_invokesRepository_withProvidedParams() {
+        when(expenseRepository.findCategoryTotalsByYearAndMonth(anyInt(), anyInt()))
+                .thenReturn(Collections.emptyList());
+        expenseService.getMonthlySummary(2000, 2);
+        verify(expenseRepository, times(1)).findCategoryTotalsByYearAndMonth(2000, 2);
     }
 
 }
